@@ -1,0 +1,19 @@
+{
+  "name": "peer-base-xstate-playground",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Jim Pick (@jimpick)",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^2.4.1",
+    "diffy": "^2.1.0",
+    "esm": "^3.0.84",
+    "peer-base": "^0.11.1",
+    "xstate": "^4.2.3"
+  }
+}
