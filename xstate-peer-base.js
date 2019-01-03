@@ -10,13 +10,10 @@ import chalk from 'chalk'
 import PeerBase from 'peer-base'
 
 class PeerBaseInstance {
-  async init () {
+  init () {
     this.backend = PeerBase('xstate-demo', {
-      peerBase: {
-        ipfs: {
-          swarm: ['/ip4/0.0.0.0/tcp/9090/ws/p2p-websocket-star'],
-          bootstrap: []
-        }
+      ipfs: {
+        swarm: ['/ip4/0.0.0.0/tcp/9090/ws/p2p-websocket-star']
       }
     })
   }
@@ -27,9 +24,9 @@ let peer1
 
 const peerMachine = Machine({
   id: 'peerBase',
-  initial: 'init',
+  initial: 'clean',
   states: {
-    init: {
+    clean: {
       on: {
         NEXT: 'new',
       }
@@ -40,18 +37,21 @@ const peerMachine = Machine({
         peer1.init()
       },
       on: {
-        NEXT: 'start',
+        NEXT: 'starting',
       }
     },
-    start: {
-      onEntry: (ctx, event) => {
+    starting: {
+      onEntry: async (ctx, event) => {
         peer1.backend.start()
-      },
+      }
+    },
+    started: {
       on: {
         NEXT: 'done',
       }
     },
     done: {
+      type: 'final'
     }
   }
 })
