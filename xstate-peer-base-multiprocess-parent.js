@@ -9,6 +9,39 @@ import { interpret } from 'xstate/lib/interpreter'
 
 import getPort from 'get-port'
 
+let peerA
+
+const peerAStates = {
+  initial: 'not started',
+  states: {
+    'not started': {
+      on: {
+        NEXT: 'starting'
+      }
+    },
+    starting: {
+      onEntry: () => { peerA = startPeer('a') },
+      on: {
+        NEXT: {
+          actions: () => { peerA.send('NEXT') }
+        },
+        'PEER A:COLLABORATION CREATED': 'editing'
+      }
+    },
+    editing: {
+      on: {
+        NEXT: {
+          actions: () => { peerA.send('NEXT') }
+        },
+        'PEER A:DONE': 'done'
+      }
+    },
+    done: {
+      type: 'final'
+    }
+  }
+}
+
 const machine = Machine({
   id: 'top',
   initial: 'initial',
@@ -32,17 +65,7 @@ const machine = Machine({
       }
     },
     'peer a': {
-      invoke: {
-        id: 'peerA',
-        src: startPeerA,
-        onDone: 'done',
-        onError: 'failed'
-      },
-      on: {
-        NEXT: {
-          actions: () => { peerA.send('NEXT') }
-        }
-      }
+      ...peerAStates
     },
     done: {
       type: 'final'
@@ -55,7 +78,6 @@ const machine = Machine({
 
 let state = ''
 const log = []
-let peerA
 const peerStates = {
   a: { step: '', crdtValue: '' },
   b: { step: '', crdtValue: '' }
@@ -65,7 +87,7 @@ const d = diffy({fullscreen: true})
 
 d.render(
   () => trim(`
-    Step: ${state.value}
+    Step: ${state}
 
     Peer A:
       Step: ${peerStates['a'].step}
@@ -84,7 +106,7 @@ const input = diffyInput({showCursor: false})
 
 const service = interpret(machine)
   .onTransition(nextState => {
-    state = nextState
+    state = JSON.stringify(nextState.value)
     d.render()
   })
 service.start()
@@ -115,31 +137,33 @@ async function startRendezvous () {
   process.on('exit', () => child.kill())
 }
 
-function startPeerA () {
-  const promise = new Promise((resolve, reject) => {
-    const child = fork(`${__dirname}/xstate-peer-base-multiprocess-child.js`, {
-      stdio: ['pipe', 'pipe', 'pipe', 'ipc']
-    })
-
-    child.on('message', message => {
-      if (message.stateMachine) {
-        peerStates['a'].step = message.stateMachine
-      }
-      if (message.crdtValue) {
-        peerStates['a'].crdtValue = message.crdtValue
-      }
-      d.render()
-    })
-
-    function appendToLog (chunk) {
-      log.push(`A: ` + chunk.toString())
-      d.render()
-    }
-    child.stdout.on('data', appendToLog)
-    child.stderr.on('data', appendToLog)
-
-    process.on('exit', () => child.kill())
-    peerA = child
+function startPeer (peerLabel) {
+  const peerLabelUpper = peerLabel.toUpperCase()
+  const child = fork(`${__dirname}/xstate-peer-base-multiprocess-child.js`, {
+    stdio: ['pipe', 'pipe', 'pipe', 'ipc']
   })
-  return promise
+
+  child.on('message', message => {
+    if (message.stateMachine) {
+      peerStates[peerLabel].step = message.stateMachine
+      service.send(
+        `PEER ${peerLabelUpper}:` +
+        `${message.stateMachine.toUpperCase()}`
+      )
+    }
+    if (message.crdtValue) {
+      peerStates['a'].crdtValue = message.crdtValue
+    }
+    d.render()
+  })
+
+  function appendToLog (chunk) {
+    log.push(`${peerLabelUpper}: ` + chunk.toString())
+    d.render()
+  }
+  child.stdout.on('data', appendToLog)
+  child.stderr.on('data', appendToLog)
+
+  process.on('exit', () => child.kill())
+  return child
 }
