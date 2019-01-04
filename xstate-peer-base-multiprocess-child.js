@@ -2,6 +2,8 @@ import { Machine } from 'xstate'
 import { interpret } from 'xstate/lib/interpreter'
 
 import PeerBase from 'peer-base'
+import IPFSRepo from 'ipfs-repo'
+import { MemoryDatastore } from 'interface-datastore'
 
 let backend
 
@@ -18,6 +20,15 @@ const peerMachine = Machine({
       onEntry: () => {
         backend = PeerBase('xstate-demo', {
           ipfs: {
+            repo: new IPFSRepo('ipfs', {
+              lock: 'memory',
+              storageBackends: {
+                root: MemoryDatastore,
+                blocks: MemoryDatastore,
+                keys: MemoryDatastore,
+                datastore: MemoryDatastore
+              }
+            }),
             swarm: ['/ip4/0.0.0.0/tcp/9090/ws/p2p-websocket-star']
           }
         })

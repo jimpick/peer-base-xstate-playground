@@ -13,18 +13,12 @@ d.render(
   () => trim(`
     State: ${state}
     Logs:
-    ${log}
+    ${log.slice(-(d.height - 10)).join('\n')}
   `)
 )
 
 const input = diffyInput({showCursor: false})
 
-/*
-const child = fork(`${__dirname}/xstate-peer-base-multiprocess-child.js`)
-const child = fork(`${__dirname}/xstate-peer-base-multiprocess-child.js`, {
-  stdio: ['inherit', 'inherit', 'inherit', 'ipc']
-})
-*/
 const child = fork(`${__dirname}/xstate-peer-base-multiprocess-child.js`, {
   stdio: ['pipe', 'pipe', 'pipe', 'ipc']
 })
