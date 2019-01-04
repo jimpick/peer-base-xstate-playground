@@ -4,6 +4,7 @@ import { interpret } from 'xstate/lib/interpreter'
 import PeerBase from 'peer-base'
 import IPFSRepo from 'ipfs-repo'
 import { MemoryDatastore } from 'interface-datastore'
+import delay from 'delay'
 
 let app
 let collaboration
@@ -64,29 +65,25 @@ const peerMachine = Machine({
         },
         onDone: 'collaboration created',
         onError: 'failed'
-      },
+      }
     },
     'collaboration created': {
       on: {
-        NEXT: 'type a'
+        NEXT: 'type some stuff'
       }
     },
-    'type a': {
-      onEntry: () => { collaboration.shared.push('a') },
-      on: {
-        NEXT: 'type b'
-      }
-    },
-    'type b': {
-      onEntry: () => { collaboration.shared.push('b') },
-      on: {
-        NEXT: 'type c'
-      }
-    },
-    'type c': {
-      onEntry: () => { collaboration.shared.push('c') },
-      on: {
-        NEXT: 'done'
+    'type some stuff': {
+      invoke: {
+        id: 'typeSomeStuff',
+        src: async () => {
+          collaboration.shared.push('a')
+          await delay(1000)
+          collaboration.shared.push('b')
+          await delay(1000)
+          collaboration.shared.push('c')
+        },
+        onDone: 'done',
+        onError: 'failed'
       }
     },
     done: {
