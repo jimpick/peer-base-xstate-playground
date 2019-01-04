@@ -5,7 +5,8 @@ import PeerBase from 'peer-base'
 import IPFSRepo from 'ipfs-repo'
 import { MemoryDatastore } from 'interface-datastore'
 
-let backend
+let app
+let collaboration
 
 const peerMachine = Machine({
   id: 'peerBase',
@@ -13,12 +14,12 @@ const peerMachine = Machine({
   states: {
     clean: {
       on: {
-        NEXT: 'new',
+        NEXT: 'new'
       }
     },
     new: {
       onEntry: () => {
-        backend = PeerBase('xstate-demo', {
+        app = PeerBase('xstate-demo', {
           ipfs: {
             repo: new IPFSRepo('ipfs', {
               lock: 'memory',
@@ -34,20 +35,58 @@ const peerMachine = Machine({
         })
       },
       on: {
-        NEXT: 'starting',
+        NEXT: 'starting'
       }
     },
     starting: {
       invoke: {
         id: 'startPeerBase',
-        src: () => backend.start(),
+        src: () => app.start(),
         onDone: 'started',
         onError: 'failed'
       },
     },
     started: {
       on: {
-        NEXT: 'done',
+        NEXT: 'create collaboration'
+      }
+    },
+    'create collaboration': {
+      invoke: {
+        id: 'startPeerBase',
+        src: async () => {
+          collaboration = await app.collaborate('collab1', 'rga')
+          collaboration.on('state changed', () => {
+            process.send({
+              crdtValue: collaboration.shared.value().join('')
+            })
+          })
+        },
+        onDone: 'collaboration created',
+        onError: 'failed'
+      },
+    },
+    'collaboration created': {
+      on: {
+        NEXT: 'type a'
+      }
+    },
+    'type a': {
+      onEntry: () => { collaboration.shared.push('a') },
+      on: {
+        NEXT: 'type b'
+      }
+    },
+    'type b': {
+      onEntry: () => { collaboration.shared.push('b') },
+      on: {
+        NEXT: 'type c'
+      }
+    },
+    'type c': {
+      onEntry: () => { collaboration.shared.push('c') },
+      on: {
+        NEXT: 'done'
       }
     },
     done: {
@@ -61,7 +100,9 @@ const peerMachine = Machine({
 
 const service = interpret(peerMachine)
   .onTransition(nextState => {
-    process.send(nextState.value)
+    process.send({
+      stateMachine: nextState.value
+    })
   })
 service.start()
 

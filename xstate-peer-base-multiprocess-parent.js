@@ -4,14 +4,18 @@ import diffy from 'diffy'
 import trim from 'diffy/trim'
 import diffyInput from 'diffy/input'
 
-let state
+let state = 'forking child process'
+let crdtValue = ''
 const log = []
 
 const d = diffy({fullscreen: true})
 
 d.render(
   () => trim(`
-    State: ${state}
+    Step: ${state}
+
+    CRDT Value: ${crdtValue}
+
     Logs:
     ${log.slice(-(d.height - 10)).join('\n')}
   `)
@@ -24,7 +28,12 @@ const child = fork(`${__dirname}/xstate-peer-base-multiprocess-child.js`, {
 })
 
 child.on('message', message => {
-  state = message
+  if (message.stateMachine) {
+    state = message.stateMachine
+  }
+  if (message.crdtValue) {
+    crdtValue = message.crdtValue
+  }
   d.render()
 })
 
