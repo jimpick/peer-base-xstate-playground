@@ -9,6 +9,8 @@ import delay from 'delay'
 let app
 let collaboration
 
+const port = process.env['RENDEZVOUS_PORT']
+
 const peerMachine = Machine({
   id: 'peerBase',
   initial: 'clean',
@@ -31,7 +33,7 @@ const peerMachine = Machine({
                 datastore: MemoryDatastore
               }
             }),
-            swarm: ['/ip4/0.0.0.0/tcp/9090/ws/p2p-websocket-star']
+            swarm: [`/ip4/0.0.0.0/tcp/${port}/ws/p2p-websocket-star`]
           }
         })
       },
