@@ -122,19 +122,19 @@ input.on('keypress', (ch, key) => {
   }
 })
 
-function appendToLog (chunk) {
-  log.push(chunk.toString())
-  d.render()
-}
-
 async function startRendezvous () {
   const port = await getPort()
-  log.push(`Starting rendezvous server on port ${port}`)
+  log.push(`RV: Starting rendezvous server on port ${port}`)
   process.env['RENDEZVOUS_PORT'] = port
   const child = spawn('npx', ['rendezvous', '-p', `${port}`])
   child.stdout.on('data', appendToLog)
   child.stderr.on('data', appendToLog)
   process.on('exit', () => child.kill())
+
+  function appendToLog (chunk) {
+    log.push(`RV: ` + chunk.toString().replace(/\s+$/, ''))
+    d.render()
+  }
 }
 
 function startPeer (peerLabel) {
@@ -158,7 +158,7 @@ function startPeer (peerLabel) {
   })
 
   function appendToLog (chunk) {
-    log.push(`${peerLabelUpper}: ` + chunk.toString())
+    log.push(`${peerLabelUpper}: ` + chunk.toString().replace(/\s+$/, ''))
     d.render()
   }
   child.stdout.on('data', appendToLog)
