@@ -13,7 +13,7 @@ import getPort from 'get-port'
 let peerA
 
 const peerAStates = {
-  initial: 'not started',
+  initial: 'starting',
   states: {
     'not started': {
       on: { NEXT: 'starting' }
@@ -27,21 +27,14 @@ const peerAStates = {
     },
     'waiting for b to be ready': {
       onEntry: assign({readyA: true}),
-      on: {
-        'PEER A:COLLABORATION CREATED': 'editing',
-        NEXT: {
-          target: 'editing',
-          cond: ctx => ctx.readyB
-        }
-      }
+      on: { 'PEER B:COLLABORATION CREATED': 'paused' }
+    },
+    paused: {
+      on: { NEXT: 'editing' }
     },
     editing: {
-      on: {
-        NEXT: {
-          actions: () => { peerA.send('NEXT') }
-        },
-        'PEER A:DONE': 'done'
-      }
+      onEntry: () => { peerA.send('NEXT') },
+      on: { 'PEER A:DONE': 'done' }
     },
     done: {
       onEntry: assign({editedA: true}),
@@ -71,7 +64,6 @@ const peerBStates = {
       },
     },
     'waiting for a to finish': {
-      onEntry: assign({readyB: true}),
       on: {
         NEXT: {
           target: 'editing',
@@ -80,15 +72,10 @@ const peerBStates = {
       }
     },
     editing: {
-      on: {
-        NEXT: {
-          actions: () => { peerB.send('NEXT') }
-        },
-        'PEER B:DONE': 'done'
-      }
+      onEntry: () => { peerB.send('NEXT') },
+      on: { 'PEER B:DONE': 'done' }
     },
     done: {
-      onEntry: assign({editedB: true}),
       type: 'final'
     }
   }
@@ -99,9 +86,7 @@ const machine = Machine({
   initial: 'initial',
   context: {
     readyA: false,
-    readyB: false,
-    editedA: false,
-    editedB: false
+    editedA: false
   },
   states: {
     initial: {
@@ -150,7 +135,7 @@ const d = diffy({fullscreen: true})
 
 d.render(
   () => trim(`
-    Step: ${state}
+    State: ${state.slice(0, d.width - 8)}
 
     Peer A:
       Step: ${peerStates['a'].step}

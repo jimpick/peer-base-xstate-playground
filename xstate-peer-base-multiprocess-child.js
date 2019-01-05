@@ -13,13 +13,8 @@ const port = process.env['RENDEZVOUS_PORT']
 
 const peerMachine = Machine({
   id: 'peerBase',
-  initial: 'clean',
+  initial: 'new',
   states: {
-    clean: {
-      on: {
-        NEXT: 'new'
-      }
-    },
     new: {
       onEntry: () => {
         app = PeerBase('xstate-demo', {
@@ -38,7 +33,8 @@ const peerMachine = Machine({
         })
       },
       on: {
-        NEXT: 'starting'
+        // NEXT: 'starting'
+        '': 'starting'
       }
     },
     starting: {
@@ -51,7 +47,8 @@ const peerMachine = Machine({
     },
     started: {
       on: {
-        NEXT: 'create collaboration'
+        // NEXT: 'create collaboration'
+        '': 'create collaboration'
       }
     },
     'create collaboration': {
