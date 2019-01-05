@@ -13,29 +13,25 @@ import getPort from 'get-port'
 let peerA
 
 const peerAStates = {
-  id: 'peerA',
   initial: 'not started',
   states: {
     'not started': {
-      on: { NEXT: 'startingA' }
+      on: { NEXT: 'starting' }
     },
-    startingA: {
+    starting: {
       onEntry: () => { peerA = startPeer('a') },
       on: {
         NEXT: { actions: () => { peerA.send('NEXT') } },
-        // 'PEER A:COLLABORATION CREATED': 'waiting for b to be ready'
-        'PEER A:COLLABORATION CREATED': 'editing'
-      },
-      //onExit: assign({readyA: true})
+        'PEER A:COLLABORATION CREATED': 'waiting for b to be ready'
+      }
     },
     'waiting for b to be ready': {
+      onEntry: assign({readyA: true}),
       on: {
+        'PEER A:COLLABORATION CREATED': 'editing',
         NEXT: {
           target: 'editing',
-          cond: ctx => {
-            // appendToLog(`Ctx: ` + JSON.stringify(ctx))
-            return ctx.readyB
-          }
+          cond: ctx => ctx.readyB
         }
       }
     },
@@ -48,7 +44,7 @@ const peerAStates = {
       }
     },
     done: {
-      onEntry: assign({readyA: true}),
+      onEntry: assign({editedA: true}),
       type: 'final'
     }
   }
@@ -57,43 +53,31 @@ const peerAStates = {
 let peerB
 
 const peerBStates = {
-  id: 'peerB',
   initial: 'not started',
   states: {
     'not started': {
       on: {
         NEXT: {
-          // target: 'starting',
-          target: 'startingB',
-          cond: ctx => {
-            // appendToLog(`CtxB: ` + JSON.stringify(ctx))
-            return ctx.readyA
-            // return true
-            // return false
-          }
+          target: 'starting',
+          cond: ctx => ctx.readyA
         }
       }
     },
-    startingB: {
+    starting: {
       onEntry: () => { peerB = startPeer('b') },
       on: {
         NEXT: { actions: () => { peerB.send('NEXT') } },
-        // 'PEER B:COLLABORATION CREATED': 'waiting'
-        'PEER B:COLLABORATION CREATED': 'editing'
+        'PEER B:COLLABORATION CREATED': 'waiting for a to finish'
       },
-      onExit: assign({readyB: true})
     },
-    waiting: {
-      /*
+    'waiting for a to finish': {
+      onEntry: assign({readyB: true}),
       on: {
-        NEXT: [
-          {
-            actions: () => { peerB.send('NEXT') }
-          }
-        ],
-        'PEER B:COLLABORATION CREATED': 'editing'
+        NEXT: {
+          target: 'editing',
+          cond: ctx => ctx.editedA
+        }
       }
-      */
     },
     editing: {
       on: {
@@ -104,6 +88,7 @@ const peerBStates = {
       }
     },
     done: {
+      onEntry: assign({editedB: true}),
       type: 'final'
     }
   }
