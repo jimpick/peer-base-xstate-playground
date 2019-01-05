@@ -78,11 +78,19 @@ const peerMachine = Machine({
       invoke: {
         id: 'typeSomeStuff',
         src: async () => {
-          collaboration.shared.push('a')
-          await delay(1000)
-          collaboration.shared.push('b')
-          await delay(1000)
-          collaboration.shared.push('c')
+          if (process.env['PEER_LABEL'] === 'a') {
+            collaboration.shared.push('a')
+            await delay(1000)
+            collaboration.shared.push('b')
+            await delay(1000)
+            collaboration.shared.push('c')
+          } else if (process.env['PEER_LABEL'] === 'b') {
+            collaboration.shared.push('d')
+            await delay(1000)
+            collaboration.shared.push('e')
+            await delay(1000)
+            collaboration.shared.push('f')
+          }
         },
         onDone: 'done',
         onError: 'failed'

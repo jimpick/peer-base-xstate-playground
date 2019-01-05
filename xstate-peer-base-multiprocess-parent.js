@@ -17,18 +17,16 @@ const peerAStates = {
   initial: 'not started',
   states: {
     'not started': {
-      on: {
-        NEXT: 'starting'
-      }
+      on: { NEXT: 'startingA' }
     },
-    starting: {
+    startingA: {
       onEntry: () => { peerA = startPeer('a') },
       on: {
         NEXT: { actions: () => { peerA.send('NEXT') } },
         // 'PEER A:COLLABORATION CREATED': 'waiting for b to be ready'
         'PEER A:COLLABORATION CREATED': 'editing'
       },
-      // onExit: assign({readyA: true})
+      //onExit: assign({readyA: true})
     },
     'waiting for b to be ready': {
       on: {
@@ -50,6 +48,7 @@ const peerAStates = {
       }
     },
     done: {
+      onEntry: assign({readyA: true}),
       type: 'final'
     }
   }
@@ -62,16 +61,27 @@ const peerBStates = {
   initial: 'not started',
   states: {
     'not started': {
-      on: { NEXT: 'starting' }
+      on: {
+        NEXT: {
+          // target: 'starting',
+          target: 'startingB',
+          cond: ctx => {
+            // appendToLog(`CtxB: ` + JSON.stringify(ctx))
+            return ctx.readyA
+            // return true
+            // return false
+          }
+        }
+      }
     },
-    starting: {
+    startingB: {
       onEntry: () => { peerB = startPeer('b') },
       on: {
         NEXT: { actions: () => { peerB.send('NEXT') } },
         // 'PEER B:COLLABORATION CREATED': 'waiting'
         'PEER B:COLLABORATION CREATED': 'editing'
       },
-      // onExit: assign({readyB: true})
+      onExit: assign({readyB: true})
     },
     waiting: {
       /*
@@ -102,14 +112,12 @@ const peerBStates = {
 const machine = Machine({
   id: 'top',
   initial: 'initial',
-  /*
   context: {
     readyA: false,
     readyB: false,
     editedA: false,
     editedB: false
   },
-  */
   states: {
     initial: {
       on: {
@@ -210,7 +218,8 @@ async function startRendezvous () {
 function startPeer (peerLabel) {
   const peerLabelUpper = peerLabel.toUpperCase()
   const child = fork(`${__dirname}/xstate-peer-base-multiprocess-child.js`, {
-    stdio: ['pipe', 'pipe', 'pipe', 'ipc']
+    stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+    env: { ...process.env, PEER_LABEL: peerLabel }
   })
 
   child.on('message', message => {
